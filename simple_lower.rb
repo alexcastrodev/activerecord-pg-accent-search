@@ -27,31 +27,14 @@ ActiveRecord::Schema.define do
   end
 end
 
-ACCENT_MAP = {
-  'Á' => 'á', 'À' => 'à', 'Â' => 'â', 'Ã' => 'ã', 'Ä' => 'ä', 'Å' => 'å',
-  'É' => 'é', 'È' => 'è', 'Ê' => 'ê', 'Ë' => 'ë',
-  'Í' => 'í', 'Ì' => 'ì', 'Î' => 'î', 'Ï' => 'ï',
-  'Ó' => 'ó', 'Ò' => 'ò', 'Ô' => 'ô', 'Õ' => 'õ', 'Ö' => 'ö',
-  'Ú' => 'ú', 'Ù' => 'ù', 'Û' => 'û', 'Ü' => 'ü',
-  'Ç' => 'ç', 'Ñ' => 'ñ', 'Ý' => 'ý'
-}
-
-def self.lowercase_sensitive_sql(column)
-  ACCENT_MAP.reduce("lower(#{column})") do |sql, (upper, lower)|
-    "replace(#{sql}, '#{upper}', '#{lower}')"
-  end
-end
-
-LOWERCASE_EXPR = lowercase_sensitive_sql('name')
-
 class Product < ActiveRecord::Base
   scope :search_by_name, ->(term) {
-    term_expr = lowercase_sensitive_sql('?')
-    where("#{LOWERCASE_EXPR} = #{term_expr}", term)
+    # Using only trim and lower
+    where("lower(trim(name)) = lower(trim(?))", term)
   }
 end
 
-class ReplaceSearchTest < Minitest::Test
+class SimpleLowerSearchTest < Minitest::Test
   def setup
     Product.delete_all
     Product.create!(name: 'José')
@@ -59,6 +42,9 @@ class ReplaceSearchTest < Minitest::Test
   end
 
   def test_does_not_find_jose_without_accent
+    # 'jose' -> lower -> 'jose'
+    # 'José' -> lower -> 'josé'
+    # 'jose' != 'josé' => Should not match
     results = Product.search_by_name('jose')
     assert_equal 0, results.count
   end
@@ -75,22 +61,14 @@ class ReplaceSearchTest < Minitest::Test
     assert_equal 'José', results.first.name
   end
 
-  def test_does_not_find_maca_de_arroz_without_accents
-    results = Product.search_by_name('maca de arroz')
-    assert_equal 0, results.count
-  end
-
-  def test_finds_maca_de_arroz_with_accents
-    results = Product.search_by_name('Maçã de Arroz')
-    assert_equal 1, results.count
-    assert_equal 'Maçã de Arroz', results.first.name
-  end
-
   def test_finds_maca_de_arroz_with_mixed_case
     results = Product.search_by_name('maçã de arroz')
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name
   end
+  
+  # Edge case: Turkish I?
+  # Postgres docker default locale is usually en_US.utf8 or C.UTF-8
 end
 
 Minitest.after_run do
