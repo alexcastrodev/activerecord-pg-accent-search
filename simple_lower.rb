@@ -66,9 +66,6 @@ class SimpleLowerSearchTest < Minitest::Test
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name
   end
-  
-  # Edge case: Turkish I?
-  # Postgres docker default locale is usually en_US.utf8 or C.UTF-8
 end
 
 Minitest.after_run do

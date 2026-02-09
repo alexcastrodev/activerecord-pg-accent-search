@@ -27,31 +27,31 @@ ActiveRecord::Schema.define do
   end
 end
 
-ACCENT_MAP = {
-  'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'A',
-  'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a',
-  'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E',
-  'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
-  'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I',
-  'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
-  'Ò' => 'O', 'Ó' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O',
-  'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
-  'Ù' => 'U', 'Ú' => 'U', 'Û' => 'U', 'Ü' => 'U',
-  'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
-  'Ç' => 'C', 'ç' => 'c',
-  'Ñ' => 'N', 'ñ' => 'n',
-  'Ý' => 'Y', 'ý' => 'y'
-}
-
-def self.strip_accents_sql(column)
-  ACCENT_MAP.reduce("lower(#{column})") do |sql, (accented, plain)|
-    "replace(#{sql}, '#{accented}', '#{plain}')"
-  end
-end
-
-STRIP_ACCENTS_EXPR = strip_accents_sql('name')
-
 class Product < ActiveRecord::Base
+  ACCENT_MAP = {
+    'À' => 'A', 'Á' => 'A', 'Â' => 'A', 'Ã' => 'A', 'Ä' => 'A', 'Å' => 'A',
+    'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a',
+    'È' => 'E', 'É' => 'E', 'Ê' => 'E', 'Ë' => 'E',
+    'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+    'Ì' => 'I', 'Í' => 'I', 'Î' => 'I', 'Ï' => 'I',
+    'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+    'Ò' => 'O', 'Ó' => 'O', 'Ô' => 'O', 'Õ' => 'O', 'Ö' => 'O',
+    'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+    'Ù' => 'U', 'Ú' => 'U', 'Û' => 'U', 'Ü' => 'U',
+    'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+    'Ç' => 'C', 'ç' => 'c',
+    'Ñ' => 'N', 'ñ' => 'n',
+    'Ý' => 'Y', 'ý' => 'y'
+  }
+
+  def self.strip_accents_sql(column)
+    ACCENT_MAP.reduce("lower(#{column})") do |sql, (accented, plain)|
+      "replace(#{sql}, '#{accented}', '#{plain}')"
+    end
+  end
+
+  STRIP_ACCENTS_EXPR = strip_accents_sql('name')
+
   scope :search_by_name, ->(term) {
     term_expr = strip_accents_sql('?')
     where("#{STRIP_ACCENTS_EXPR} = #{term_expr}", term)

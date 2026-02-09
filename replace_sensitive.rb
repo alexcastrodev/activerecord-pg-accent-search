@@ -27,24 +27,24 @@ ActiveRecord::Schema.define do
   end
 end
 
-ACCENT_MAP = {
-  'Á' => 'á', 'À' => 'à', 'Â' => 'â', 'Ã' => 'ã', 'Ä' => 'ä', 'Å' => 'å',
-  'É' => 'é', 'È' => 'è', 'Ê' => 'ê', 'Ë' => 'ë',
-  'Í' => 'í', 'Ì' => 'ì', 'Î' => 'î', 'Ï' => 'ï',
-  'Ó' => 'ó', 'Ò' => 'ò', 'Ô' => 'ô', 'Õ' => 'õ', 'Ö' => 'ö',
-  'Ú' => 'ú', 'Ù' => 'ù', 'Û' => 'û', 'Ü' => 'ü',
-  'Ç' => 'ç', 'Ñ' => 'ñ', 'Ý' => 'ý'
-}
-
-def self.lowercase_sensitive_sql(column)
-  ACCENT_MAP.reduce("lower(#{column})") do |sql, (upper, lower)|
-    "replace(#{sql}, '#{upper}', '#{lower}')"
-  end
-end
-
-LOWERCASE_EXPR = lowercase_sensitive_sql('name')
-
 class Product < ActiveRecord::Base
+  ACCENT_MAP = {
+    'Á' => 'á', 'À' => 'à', 'Â' => 'â', 'Ã' => 'ã', 'Ä' => 'ä', 'Å' => 'å',
+    'É' => 'é', 'È' => 'è', 'Ê' => 'ê', 'Ë' => 'ë',
+    'Í' => 'í', 'Ì' => 'ì', 'Î' => 'î', 'Ï' => 'ï',
+    'Ó' => 'ó', 'Ò' => 'ò', 'Ô' => 'ô', 'Õ' => 'õ', 'Ö' => 'ö',
+    'Ú' => 'ú', 'Ù' => 'ù', 'Û' => 'û', 'Ü' => 'ü',
+    'Ç' => 'ç', 'Ñ' => 'ñ', 'Ý' => 'ý'
+  }
+
+  def self.lowercase_sensitive_sql(column)
+    ACCENT_MAP.reduce("lower(#{column})") do |sql, (upper, lower)|
+      "replace(#{sql}, '#{upper}', '#{lower}')"
+    end
+  end
+
+  LOWERCASE_EXPR = lowercase_sensitive_sql('name')
+
   scope :search_by_name, ->(term) {
     term_expr = lowercase_sensitive_sql('?')
     where("#{LOWERCASE_EXPR} = #{term_expr}", term)
