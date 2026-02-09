@@ -15,7 +15,7 @@ require 'active_record'
 require 'testcontainers/postgres'
 require 'minitest/autorun'
 
-POSTGRES_CONTAINER = Testcontainers::PostgresContainer.new("postgres:17")
+POSTGRES_CONTAINER = Testcontainers::PostgresContainer.new("postgres:18")
 POSTGRES_CONTAINER.start
 
 ActiveRecord::Base.establish_connection(POSTGRES_CONTAINER.database_url)

@@ -21,7 +21,18 @@ POSTGRES_CONTAINER.start
 ActiveRecord::Base.establish_connection(POSTGRES_CONTAINER.database_url)
 ActiveRecord::Base.logger = nil
 
-ActiveRecord::Base.connection.execute('CREATE EXTENSION IF NOT EXISTS unaccent')
+ActiveRecord::Base.connection.execute(<<~SQL)
+  DO $$
+  BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_collation WHERE collname = 'accent_sensitive') THEN
+      CREATE COLLATION accent_sensitive (
+        provider = icu,
+        locale = 'und-u-ks-level2',
+        deterministic = false
+      );
+    END IF;
+  END $$;
+SQL
 
 ActiveRecord::Schema.define do
   drop_table :products, if_exists: true
@@ -34,22 +45,21 @@ end
 
 class Product < ActiveRecord::Base
   scope :search_by_name, ->(term) {
-    where("unaccent(name) ILIKE unaccent(?)", "%#{term}%")
+    where("name COLLATE \"accent_sensitive\" = ? COLLATE \"accent_sensitive\"", term)
   }
 end
 
-class UnaccentSearchTest < Minitest::Test
+class CollationSearchTest < Minitest::Test
   def setup
     Product.delete_all
     Product.create!(name: 'José')
     Product.create!(name: 'Maçã de Arroz')
   end
 
-  def test_finds_jose_without_accent
-    results = Product.search_by_name('jose')
+  def test_does_not_find_jose_without_accent
+    results = Product.search_by_name('jose') # 'e' != 'é'
 
-    assert_equal 1, results.count
-    assert_equal 'José', results.first.name
+    assert_equal 0, results.count
   end
 
   def test_finds_jose_with_accent
@@ -59,15 +69,28 @@ class UnaccentSearchTest < Minitest::Test
     assert_equal 'José', results.first.name
   end
 
-  def test_finds_maca_de_arroz_without_accents
+  def test_finds_jose_with_mixed_case
+    results = Product.search_by_name('josé') # case differs, accent same
+
+    assert_equal 1, results.count
+    assert_equal 'José', results.first.name
+  end
+
+  def test_does_not_find_maca_de_arroz_without_accents
     results = Product.search_by_name('maca de arroz')
+
+    assert_equal 0, results.count
+  end
+
+  def test_finds_maca_de_arroz_with_accents
+    results = Product.search_by_name('Maçã de Arroz')
 
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name
   end
 
-  def test_finds_maca_de_arroz_with_accents
-    results = Product.search_by_name('Maçã de Arroz')
+  def test_finds_maca_de_arroz_with_mixed_case
+    results = Product.search_by_name('maçã de arroz')
 
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name

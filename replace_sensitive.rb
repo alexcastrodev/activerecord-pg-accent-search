@@ -15,13 +15,11 @@ require 'active_record'
 require 'testcontainers/postgres'
 require 'minitest/autorun'
 
-POSTGRES_CONTAINER = Testcontainers::PostgresContainer.new("postgres:18")
+POSTGRES_CONTAINER = Testcontainers::PostgresContainer.new("postgres:17")
 POSTGRES_CONTAINER.start
 
 ActiveRecord::Base.establish_connection(POSTGRES_CONTAINER.database_url)
 ActiveRecord::Base.logger = nil
-
-ActiveRecord::Base.connection.execute('CREATE EXTENSION IF NOT EXISTS unaccent')
 
 ActiveRecord::Schema.define do
   drop_table :products, if_exists: true
@@ -32,43 +30,67 @@ ActiveRecord::Schema.define do
   end
 end
 
+ACCENT_MAP = {
+  'Á' => 'á', 'À' => 'à', 'Â' => 'â', 'Ã' => 'ã', 'Ä' => 'ä', 'Å' => 'å',
+  'É' => 'é', 'È' => 'è', 'Ê' => 'ê', 'Ë' => 'ë',
+  'Í' => 'í', 'Ì' => 'ì', 'Î' => 'î', 'Ï' => 'ï',
+  'Ó' => 'ó', 'Ò' => 'ò', 'Ô' => 'ô', 'Õ' => 'õ', 'Ö' => 'ö',
+  'Ú' => 'ú', 'Ù' => 'ù', 'Û' => 'û', 'Ü' => 'ü',
+  'Ç' => 'ç', 'Ñ' => 'ñ', 'Ý' => 'ý'
+}
+
+def self.lowercase_sensitive_sql(column)
+  ACCENT_MAP.reduce("lower(#{column})") do |sql, (upper, lower)|
+    "replace(#{sql}, '#{upper}', '#{lower}')"
+  end
+end
+
+LOWERCASE_EXPR = lowercase_sensitive_sql('name')
+
 class Product < ActiveRecord::Base
   scope :search_by_name, ->(term) {
-    where("unaccent(name) ILIKE unaccent(?)", "%#{term}%")
+    term_expr = lowercase_sensitive_sql('?')
+    where("#{LOWERCASE_EXPR} = #{term_expr}", term)
   }
 end
 
-class UnaccentSearchTest < Minitest::Test
+class ReplaceSearchTest < Minitest::Test
   def setup
     Product.delete_all
     Product.create!(name: 'José')
     Product.create!(name: 'Maçã de Arroz')
   end
 
-  def test_finds_jose_without_accent
+  def test_does_not_find_jose_without_accent
     results = Product.search_by_name('jose')
-
-    assert_equal 1, results.count
-    assert_equal 'José', results.first.name
+    assert_equal 0, results.count
   end
 
   def test_finds_jose_with_accent
     results = Product.search_by_name('José')
-
     assert_equal 1, results.count
     assert_equal 'José', results.first.name
   end
 
-  def test_finds_maca_de_arroz_without_accents
-    results = Product.search_by_name('maca de arroz')
-
+  def test_finds_jose_with_mixed_case
+    results = Product.search_by_name('josé')
     assert_equal 1, results.count
-    assert_equal 'Maçã de Arroz', results.first.name
+    assert_equal 'José', results.first.name
+  end
+
+  def test_does_not_find_maca_de_arroz_without_accents
+    results = Product.search_by_name('maca de arroz')
+    assert_equal 0, results.count
   end
 
   def test_finds_maca_de_arroz_with_accents
     results = Product.search_by_name('Maçã de Arroz')
+    assert_equal 1, results.count
+    assert_equal 'Maçã de Arroz', results.first.name
+  end
 
+  def test_finds_maca_de_arroz_with_mixed_case
+    results = Product.search_by_name('maçã de arroz')
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name
   end
