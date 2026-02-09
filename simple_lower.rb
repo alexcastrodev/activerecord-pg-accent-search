@@ -39,6 +39,8 @@ class SimpleLowerSearchTest < Minitest::Test
     Product.delete_all
     Product.create!(name: 'José')
     Product.create!(name: 'Maçã de Arroz')
+    Product.create!(name: 'ºC')
+    Product.create!(name: 'm3/d')
   end
 
   def test_does_not_find_jose_without_accent
@@ -65,6 +67,34 @@ class SimpleLowerSearchTest < Minitest::Test
     results = Product.search_by_name('maçã de arroz')
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name
+  end
+
+  def test_finds_graus_celsius
+    # 'ºC' -> lower -> 'ºc'
+    results = Product.search_by_name('ºC')
+    assert_equal 1, results.count
+    assert_equal 'ºC', results.first.name
+  end
+  
+  def test_finds_m3_d
+    # 'm3/d' -> lower -> 'm3/d'
+    results = Product.search_by_name('m3/d')
+    assert_equal 1, results.count
+    assert_equal 'm3/d', results.first.name
+  end
+  
+  def test_finds_m3_d_different_case
+    # o contrario da db
+    results = Product.search_by_name('M3/D')
+    assert_equal 1, results.count
+    assert_equal 'm3/d', results.first.name
+  end
+  
+  def test_finds_celsius_with_different_case
+    # o contrario da db
+    results = Product.search_by_name('ºc')
+    assert_equal 1, results.count
+    assert_equal 'ºC', results.first.name
   end
 end
 
