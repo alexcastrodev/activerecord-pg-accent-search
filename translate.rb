@@ -27,8 +27,8 @@ ActiveRecord::Schema.define do
   end
 end
 
-ACCENTED   = 'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇçÑñÝý'
-UNACCENTED = 'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNnYy'
+ACCENTED   = 'ÀÁÂÃÄÅàáâãäåÈÉÊËèéêëÌÍÎÏìíîïÒÓÔÕÖòóôõöÙÚÛÜùúûüÇçÑñÝý²³'
+UNACCENTED = 'AAAAAAaaaaaaEEEEeeeeIIIIiiiiOOOOOoooooUUUUuuuuCcNnYy23'
 
 class Product < ActiveRecord::Base
   scope :search_by_name, ->(term) {
@@ -72,6 +72,27 @@ class TranslateSearchTest < Minitest::Test
 
     assert_equal 1, results.count
     assert_equal 'Maçã de Arroz', results.first.name
+  end
+  def test_finds_cubed_meters
+    Product.create!(name: 'm³/aco/día')
+
+    # exact match with different accent on i
+    results = Product.search_by_name('m³/aco/dia')
+    assert_equal 1, results.count
+    assert_equal 'm³/aco/día', results.first.name
+
+    # match with 3 instead of ³
+    results = Product.search_by_name('m3/aco/dia')
+    assert_equal 1, results.count
+    assert_equal 'm³/aco/día', results.first.name
+  end
+
+  def test_finds_squared_meters
+    Product.create!(name: 'Área 50m²')
+
+    results = Product.search_by_name('area 50m2')
+    assert_equal 1, results.count
+    assert_equal 'Área 50m²', results.first.name
   end
 end
 
