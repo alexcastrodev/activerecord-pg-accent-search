@@ -41,6 +41,14 @@ class SimpleLowerSearchTest < Minitest::Test
     Product.create!(name: 'Maçã de Arroz')
     Product.create!(name: 'ºC')
     Product.create!(name: 'm3/d')
+    Product.create!(name: 'm²')
+    Product.create!(name: 'kg/cm²')
+    Product.create!(name: 'Wh/(m³•mca)')
+    Product.create!(name: 'm³/día')
+    Product.create!(name: 'Tan φ')
+    Product.create!(name: 'Cos φ')
+    Product.create!(name: '%')
+    Product.create!(name: 'µS/cm')
   end
 
   def test_does_not_find_jose_without_accent
@@ -95,6 +103,55 @@ class SimpleLowerSearchTest < Minitest::Test
     results = Product.search_by_name('ºc')
     assert_equal 1, results.count
     assert_equal 'ºC', results.first.name
+  end
+
+  # Agora uns doido
+  def test_finds_m2
+    results = Product.search_by_name('m²')
+    assert_equal 1, results.count
+    assert_equal 'm²', results.first.name
+  end
+
+  def test_finds_kg_cm2
+    results = Product.search_by_name('kg/cm²')
+    assert_equal 1, results.count
+    assert_equal 'kg/cm²', results.first.name
+  end
+
+  def test_finds_wh_m3_mca
+    results = Product.search_by_name('Wh/(m³•mca)')
+    assert_equal 1, results.count
+    assert_equal 'Wh/(m³•mca)', results.first.name
+  end
+
+  def test_finds_m3_dia
+    results = Product.search_by_name('m³/día')
+    assert_equal 1, results.count
+    assert_equal 'm³/día', results.first.name
+  end
+
+  def test_finds_tan_phi
+    results = Product.search_by_name('TAN φ')
+    assert_equal 1, results.count
+    assert_equal 'Tan φ', results.first.name
+  end
+
+  def test_finds_cos_phi
+    results = Product.search_by_name('cos φ')
+    assert_equal 1, results.count
+    assert_equal 'Cos φ', results.first.name
+  end
+
+  def test_finds_percent
+    results = Product.search_by_name('%')
+    assert_equal 1, results.count
+    assert_equal '%', results.first.name
+  end
+
+  def test_finds_micro_s_cm
+    results = Product.search_by_name('µS/cm')
+    assert_equal 1, results.count
+    assert_equal 'µS/cm', results.first.name
   end
 end
 
